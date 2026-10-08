@@ -661,7 +661,7 @@ app.listen(443, () => console.log('🚀 Servidor Pix Cashback rodando na porta 4
             const qrContainer = document.getElementById('activeQrCodeContainer');
             qrContainer.innerHTML = '';
             
-            currentPayloadMock = `00020101021226860014BR.GOV.BCB.PIX2564${chave}520400005303986540${valor.toFixed(2).length}${valor.toFixed(2)}5802BR59${nome.length.toString().padStart(2, '0')}${nome}6009CAIAPONIA62070503***6304ABCD`;
+            currentPayloadMock = `00020101021226860014BR.GOV.BCB.PIX2564${chave}520400005303986540${valor.toFixed(2).length}${valor.toFixed(2)}5802BR59${nome.length.toString().padStart(2, '0')}${nome}6009CAIAPONIA62070503***63043F07`;
 
             new QRCode(qrContainer, {
                 text: currentPayloadMock,
