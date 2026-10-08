@@ -674,23 +674,22 @@ app.listen(443, () => console.log('🚀 Servidor Pix Cashback rodando na porta 4
             resetPipelineUI();
 
             
-//  Generate compliant Pix payload
+// Generate QR Code
 const qrContainer = document.getElementById('activeQrCodeContainer');
 qrContainer.innerHTML = '';
-const validPayload = generatePixPayload({
-    chave: chave,
-    nome: nome,
-    cidade: 'BRASILIA',
-    valor: valor, // e.g., 10 or 10.5
-    txId: 'TX12345'
+
+// Payload do QR Code do Pix (estático)
+const payloadMock = "00020101021226860014BR.GOV.BCB.PIX2564qrpix.bradesco.com.br/qr/v2/3cd328a2-0859-4c8f-98ae-154ead7e21d2520400005303986540810000.005802BR5925CARLOS DANIEL MENDES SANT6009CAIAPONIA62070503***63043F07";
 
 new QRCode(qrContainer, {
-    text: validPayload,
+    text: payloadMock,
     width: 144,
     height: 144,
     colorDark: "#020617",
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.M
+});
+
 });
 
             });
