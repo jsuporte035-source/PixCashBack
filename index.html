@@ -673,18 +673,26 @@ app.listen(443, () => console.log('🚀 Servidor Pix Cashback rodando na porta 4
             // Reset Pipeline steps UI
             resetPipelineUI();
 
-            // Generate QR Code
-            const qrContainer = document.getElementById('activeQrCodeContainer');
-            qrContainer.innerHTML = '';
-            const payloadMock = `00020126580014BR.GOV.BCB.PIX0136${chave}520400005303986540${valor.toString().length}${valor}5802BR5909${nome}6008BRASILIA62070503***6304${randomTxId.substring(0, 4)}`;
+            
+//  Generate compliant Pix payload
+const qrContainer = document.getElementById('activeQrCodeContainer');
+qrContainer.innerHTML = '';
+const validPayload = generatePixPayload({
+    chave: chave,
+    nome: nome,
+    cidade: 'BRASILIA',
+    valor: valor, // e.g., 10 or 10.5
+    txId: 'TX12345'
 
-            new QRCode(qrContainer, {
-                text: payloadMock,
-                width: 144,
-                height: 144,
-                colorDark: "#020617",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.M
+new QRCode(qrContainer, {
+    text: validPayload,
+    width: 144,
+    height: 144,
+    colorDark: "#020617",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+});
+
             });
 
             logConsole(`[COBRANÇA CRIADA] TxID: ${randomTxId} | Valor: R$ ${valor.toFixed(2)} | Cashback: R$ ${cashback.toFixed(2)} (${rate}%)`);
