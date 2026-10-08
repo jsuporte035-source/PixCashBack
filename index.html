@@ -476,6 +476,76 @@
 
                 <div class="relative">
                     <pre class="bg-slate-950 border border-slate-800 rounded-xl p-5 font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed"><code id="codeSnippetText">const express = require('express');
+const express = require('express');
+const Efipay = require('efipay');
+
+const app = express();
+app.use(express.json());
+
+// 1. Configuração do SDK Oficial com Certificado mTLS
+const options = {
+  sandbox: true, // Mudar para false em produção
+  client_id: process.env.EFI_CLIENT_ID,
+  client_secret: process.env.EFI_CLIENT_SECRET,
+  certificate: './caminho_do_certificado.p12',
+};
+
+const efipay = new Efipay(options);
+
+// 2. Porcentagem de Cashback configurada (ex: 5%)
+const CASHBACK_PERCENTAGE = 0.05;
+
+// 3. Webhook chamado automaticamente pelo banco ao receber o Pix
+app.post('/webhook/pix', async (req, res) => {
+  try {
+    // Confirma imediatamente o recebimento ao Banco Central
+    res.status(200).send({ status: 'recebido' });
+
+    const listaPix = req.body.pix;
+
+    if (listaPix && Array.isArray(listaPix)) {
+      for (const pagamento of listaPix) {
+        const valorPago = parseFloat(pagamento.valor);
+        const chavePixCliente = pagamento.pagador.chavePix || pagamento.pagador.cpf;
+
+        // Calcula o valor exato do cashback
+        const valorCashback = (valorPago * CASHBACK_PERCENTAGE).toFixed(2);
+
+        console.log(`[PIX RECEBIDO] R$ ${valorPago} de ${pagamento.pagador.nome}`);
+        console.log(`[CASHBACK] Enviando R$ ${valorCashback} para chave: ${chavePixCliente}`);
+
+        // Executa a transferência Pix de retorno (Pix Out)
+        await dispararPixOutCashback(chavePixCliente, valorCashback);
+      }
+    }
+  } catch (error) {
+    console.error('Erro no processamento do Webhook:', error);
+  }
+});
+
+// 4. Função auxiliar para envio automático de Pix Out
+async function dispararPixOutCashback(chaveDestino, valor) {
+  const bodyPixOut = {
+    valor: valor.toString(),
+    pagador: {
+      chave: process.env.SUA_CHAVE_PIX_EMPRESA, // Sua chave de origem
+    },
+    favorecido: {
+      chave: chaveDestino, // Chave Pix do cliente beneficiado
+    },
+  };
+
+  try {
+    const resposta = await efipay.pixSend([], bodyPixOut);
+    console.log('[CASHBACK ENVIADO COM SUCESSO]', resposta);
+    return resposta;
+  } catch (error) {
+    console.error('Erro ao enviar Pix Out:', error);
+    throw error;
+  }
+}
+
+app.listen(443, () => console.log('🚀 Servidor Pix Cashback rodando na porta 443'));
 </code></pre>
                 </div>
             </div>
