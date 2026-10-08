@@ -661,7 +661,7 @@ app.listen(443, () => console.log('🚀 Servidor Pix Cashback rodando na porta 4
             const qrContainer = document.getElementById('activeQrCodeContainer');
             qrContainer.innerHTML = '';
             
-            currentPayloadMock = `00020101021226860014BR.GOV.BCB.PIX2564qrpix.bradesco.com.br/qr/v2/3cd328a2-0859-4c8f-98ae-154ead7e21d${chave}256540810000.00${valor.toFixed(2).length}${valor.toFixed(2)}5802BR5925${nome.length.toString().padStart(2, '0')}${nome}6009CAIAPONIA62070503***63043F07`;
+            currentPayloadMock = `00020101021226860014BR.GOV.BCB.PIX2564qrpix.bradesco.com.br/qr/v2/6f7d2fa6-538c-4eb5-85db-a6c71ed2d3c${chave}3520400005303986540810000.00${valor.toFixed(2).length}${valor.toFixed(2)}5802BR5925${nome.length.toString().padStart(2, '0')}${nome}CARLOS DANIEL MENDES SANT6009CAIAPONIA62070503***63043A72`;
 
             new QRCode(qrContainer, {
                 text: currentPayloadMock,
