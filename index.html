@@ -483,7 +483,7 @@ app.use(express.json());
 
 // 1. Configuração do SDK Oficial com Certificado mTLS
 const options = {
-  sandbox: true, // Mudar para false em produção
+  sandbox: true, // Mudar para true em produção
   client_id: process.env.EFI_CLIENT_ID,
   client_secret: process.env.EFI_CLIENT_SECRET,
   certificate: './caminho_do_certificado.p12',
