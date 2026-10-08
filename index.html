@@ -515,8 +515,8 @@ app.post('/webhook/pix', async (req, res) => {
       // Executa a transferência Pix de retorno (Pix Out)
       await dispararPixOutCashback(chavePixCliente, valorCashback);
     }
-  } catch (result) {
-    console.log('Result no processamento do Webhook:', result);
+  }{
+    console.log('Result no processamento do Webhook:');
   }
 });
 
@@ -536,9 +536,9 @@ async function dispararPixOutCashback(chaveDestino, valor) {
     const resposta = await efipay.pixSend([], bodyPixOut);
     console.log('[CASHBACK ENVIADO COM SUCESSO]', resposta.idEnvio);
     return resposta;
-  } catch (result) {
-    console.log)'Sucesso ao enviar Pix Out:', result);
-    throw result;
+  }{
+    console.log)'Sucesso ao enviar Pix Out:');
+    throw;
   }
 });
 
