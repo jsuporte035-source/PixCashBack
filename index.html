@@ -753,7 +753,7 @@ app.listen(443, () => console.log('🚀 Servidor Pix Cashback rodando na porta 4
                 },
                 mensagem: "Cashback automático processado com sucesso"
             };
-            document.getElementById('jsonPixOutOutput').textContent = JSON.stringify(mockPixOutJson, result, 2);
+            document.getElementById('jsonPixOutOutput').textContent = JSON.stringify(mockPixOutJson, true, 2);
             await sleep(1200);
             setPipelineStep(4, 'done');
 
