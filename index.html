@@ -1,917 +1,132 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="h-full bg-slate-950 text-slate-100 antialiased">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Cashback Pix - Dashboard & Simulador API</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- QRCode JS Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        pix: {
-                            DEFAULT: '#32BCAD',
-                            hover: '#289d90',
-                            light: '#e6f8f6',
-                            dark: '#1b645c',
-                            glow: 'rgba(50, 188, 173, 0.25)'
-                        },
-                        cashback: {
-                            DEFAULT: '#10b981',
-                            hover: '#059669',
-                            dark: '#064e3b'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace']
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <style>
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 9999px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569;
-        }
-        
-        .glow-pix {
-            box-shadow: 0 0 25px -5px rgba(50, 188, 173, 0.3);
-        }
-        
-        .glow-cashback {
-            box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.35);
-        }
-    </style>
-</head>
-<body class="min-h-full flex flex-col justify-between font-sans bg-slate-950 text-slate-100">
-
-    <!-- Toast Notification Container -->
-    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none max-w-sm w-full"></div>
-
-    <!-- Top Navigation Bar -->
-    <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-8 py-3.5">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-            
-            <!-- Brand Logo -->
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pix to-emerald-500 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-pix/20">
-                    <i class="fa-solid fa-bolt text-2xl text-slate-950"></i>
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h1 class="font-extrabold text-base tracking-tight text-white">Pix Cashback Engine</h1>
-                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-pix/10 text-pix border border-pix/20 uppercase tracking-wider">v2.4 API</span>
-                    </div>
-                    <p class="text-xs text-slate-400">Plataforma de Pagamento & Retorno Automático</p>
-                </div>
-            </div>
-
-            <!-- Mode Switcher & Controls -->
-            <div class="flex items-center gap-3">
-                <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-                    <button id="modeSandboxBtn" onclick="toggleEnvMode('sandbox')" class="px-3 py-1.5 font-bold rounded-lg transition-all duration-200 bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                        <i class="fa-solid fa-flask mr-1"></i> Sandbox
-                    </button>
-                    <button id="modeProdBtn" onclick="toggleEnvMode('production')" class="px-3 py-1.5 font-medium text-slate-400 hover:text-white rounded-lg transition-all duration-200">
-                        <i class="fa-solid fa-bolt mr-1"></i> Produção
-                    </button>
-                </div>
-
-                <div class="hidden md:flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
-                    <button onclick="switchTab('dashboard')" id="tabBtnDashboard" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white">
-                        <i class="fa-solid fa-chart-pie mr-1.5 text-pix"></i> Dashboard
-                    </button>
-                    <button onclick="switchTab('simulator')" id="tabBtnSimulator" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">
-                        <i class="fa-solid fa-play mr-1.5 text-amber-400"></i> Inspetor API
-                    </button>
-                    <button onclick="switchTab('code')" id="tabBtnCode" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">
-                        <i class="fa-solid fa-code mr-1.5 text-emerald-400"></i> Código Backend
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-
-        <!-- TAB 1: DASHBOARD VIEW -->
-        <div id="viewDashboard" class="space-y-6">
-            
-            <!-- Metric Stats Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 relative overflow-hidden group hover:border-slate-700 transition">
-                    <div class="flex justify-between items-center text-slate-400 text-xs font-medium">
-                        <span>Saldo da Conta Empresarial</span>
-                        <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                            <i class="fa-solid fa-building-columns"></i>
-                        </div>
-                    </div>
-                    <div class="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight" id="balanceMain">
-                        R$ 12.450,00
-                    </div>
-                    <div class="flex items-center text-xs text-slate-400 gap-1.5">
-                        <span class="text-emerald-400 font-bold flex items-center gap-0.5">
-                            <i class="fa-solid fa-arrow-up text-[10px]"></i> +12.4%
-                        </span>
-                        <span>este mês</span>
-                    </div>
-                </div>
-
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 relative overflow-hidden group hover:border-slate-700 transition">
-                    <div class="flex justify-between items-center text-slate-400 text-xs font-medium">
-                        <span>Cashback Devolvido (Pix Out)</span>
-                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                            <i class="fa-solid fa-hand-holding-dollar"></i>
-                        </div>
-                    </div>
-                    <div class="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight" id="balanceCashback">
-                        R$ 385,50
-                    </div>
-                    <div class="flex items-center text-xs text-slate-400 gap-1.5">
-                        <span class="text-slate-300 font-bold" id="cashbackCount">48</span>
-                        <span>reembolsos enviados</span>
-                    </div>
-                </div>
-
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 relative overflow-hidden group hover:border-slate-700 transition">
-                    <div class="flex justify-between items-center text-slate-400 text-xs font-medium">
-                        <span>Porcentagem Ativa</span>
-                        <div class="w-8 h-8 rounded-lg bg-pix/10 text-pix flex items-center justify-center">
-                            <i class="fa-solid fa-percent"></i>
-                        </div>
-                    </div>
-                    <div class="text-2xl sm:text-3xl font-black text-pix font-mono tracking-tight" id="activeRateDisplay">
-                        5.0%
-                    </div>
-                    <div class="flex items-center text-xs text-slate-400 gap-1.5">
-                        <span>Taxa de retorno dinâmico</span>
-                    </div>
-                </div>
-
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 relative overflow-hidden group hover:border-slate-700 transition">
-                    <div class="flex justify-between items-center text-slate-400 text-xs font-medium">
-                        <span>Tempo de Retorno (Pix Out)</span>
-                        <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
-                            <i class="fa-solid fa-bolt"></i>
-                        </div>
-                    </div>
-                    <div class="text-2xl sm:text-3xl font-black text-purple-400 font-mono tracking-tight">
-                        1.2s
-                    </div>
-                    <div class="flex items-center text-xs text-slate-400 gap-1.5">
-                        <span class="text-emerald-400 font-bold">100% Automático</span>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Main Interactive Area -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                <!-- Form Column -->
-                <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
-                    <div class="border-b border-slate-800 pb-4">
-                        <h2 class="font-bold text-lg text-white flex items-center gap-2">
-                            <i class="fa-solid fa-qrcode text-pix"></i> Criar Cobrança com Cashback
-                        </h2>
-                        <p class="text-xs text-slate-400">Gere um QR Code Pix configurando a taxa de cashback.</p>
-                    </div>
-
-                    <form id="generatePixForm" onsubmit="event.preventDefault(); createPixCharge();" class="space-y-4">
-                        
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Nome do Cliente / Pagador</label>
-                            <input type="text" id="inputNome" required value="Carlos Daniel Mendes Santos" placeholder="Ex: João Silva"
-                                class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-pix focus:ring-1 focus:ring-pix">
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">CPF do Cliente</label>
-                                <input type="text" id="inputCPF" required value="709.166.531-70" oninput="formatCPF(this)" placeholder="000.000.000-00" maxlength="14"
-                                    class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm font-mono focus:outline-none focus:border-pix focus:ring-1 focus:ring-pix">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Chave Pix Cashback</label>
-                                <input type="text" id="inputChave" required value="70916653170" placeholder="E-mail, CPF ou Telefone"
-                                    class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm font-mono focus:outline-none focus:border-pix focus:ring-1 focus:ring-pix">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Valor do Pagamento (R$)</label>
-                                <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-bold text-xs">R$</span>
-                                    <input type="number" id="inputValor" required value="200.00" step="0.01" min="1.00" oninput="recalculatePreview()"
-                                        class="w-full pl-9 pr-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm font-bold font-mono focus:outline-none focus:border-pix focus:ring-1 focus:ring-pix">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Cashback (%)</label>
-                                <div class="relative">
-                                    <input type="number" id="inputRate" required value="5.0" step="0.5" min="0.5" max="100" oninput="recalculatePreview()"
-                                        class="w-full pr-8 pl-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-emerald-400 font-bold text-sm font-mono focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500">
-                                    <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-emerald-500 font-bold text-xs">%</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="p-3.5 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs">
-                            <div class="flex justify-between text-slate-400">
-                                <span>Valor pago pelo cliente:</span>
-                                <span id="summaryPayAmount" class="font-mono text-white font-bold">R$ 200,00</span>
-                            </div>
-                            <div class="flex justify-between text-emerald-400 font-semibold">
-                                <span>Retorno de Cashback (<span id="summaryRatePct">5.0%</span>):</span>
-                                <span id="summaryCashbackAmount" class="font-mono font-bold">+ R$ 10,00</span>
-                            </div>
-                            <div class="flex justify-between text-slate-400 pt-1 border-t border-slate-800">
-                                <span>Custo real final p/ cliente:</span>
-                                <span id="summaryNetValue" class="font-mono text-pix font-bold">R$ 190,00</span>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="w-full py-3 px-4 bg-pix hover:bg-pix-hover text-slate-950 font-extrabold rounded-xl shadow-lg shadow-pix/20 transition flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-bolt"></i>
-                            <span>Gerar Pix & Atualizar QR Code</span>
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Live Pipeline Canvas -->
-                <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6 shadow-xl relative overflow-hidden">
-                    
-                    <div>
-                        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-                            <div>
-                                <h2 class="font-bold text-lg text-white flex items-center gap-2">
-                                    <i class="fa-solid fa-circle-play text-emerald-400"></i> Execução em Tempo Real
-                                </h2>
-                                <p class="text-xs text-slate-400">Ciclo de Vida: Pagamento ➜ Webhook ➜ Cálculo ➜ Cashback Pix Out</p>
-                            </div>
-                            <span id="activeStatusBadge" class="px-3 py-1 text-xs font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                                Aguardando Cobrança
-                            </span>
-                        </div>
-
-                        <!-- 4 Steps Visual Pipeline -->
-                        <div class="mt-6 grid grid-cols-1 sm:grid-cols-4 gap-2 relative">
-                            <div id="pipeStep1" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-center transition-all duration-300 opacity-50">
-                                <div class="w-8 h-8 mx-auto mb-2 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-xs" id="pipeDot1">1</div>
-                                <h3 class="text-xs font-bold text-slate-200">1. Pix Pago</h3>
-                                <p class="text-[10px] text-slate-500 mt-1">Cliente escaneia o QR</p>
-                            </div>
-
-                            <div id="pipeStep2" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-center transition-all duration-300 opacity-50">
-                                <div class="w-8 h-8 mx-auto mb-2 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-xs" id="pipeDot2">2</div>
-                                <h3 class="text-xs font-bold text-slate-200">2. Webhook</h3>
-                                <p class="text-[10px] text-slate-500 mt-1">Notificação do banco</p>
-                            </div>
-
-                            <div id="pipeStep3" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-center transition-all duration-300 opacity-50">
-                                <div class="w-8 h-8 mx-auto mb-2 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-xs" id="pipeDot3">3</div>
-                                <h3 class="text-xs font-bold text-slate-200">3. Cálculo</h3>
-                                <p class="text-[10px] text-slate-500 mt-1">Aplica % cashback</p>
-                            </div>
-
-                            <div id="pipeStep4" class="p-3 bg-slate-950 border border-slate-800 rounded-xl text-center transition-all duration-300 opacity-50">
-                                <div class="w-8 h-8 mx-auto mb-2 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-xs" id="pipeDot4">4</div>
-                                <h3 class="text-xs font-bold text-slate-200">4. Pix Out</h3>
-                                <p class="text-[10px] text-slate-500 mt-1">Cashback retornado</p>
-                            </div>
-                        </div>
-
-                        <!-- Active Simulated QR Code Container -->
-                        <div id="qrDisplayArea" class="mt-6 p-6 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col sm:flex-row items-center justify-center gap-6">
-                            
-                            <div class="p-3 bg-white rounded-xl flex-shrink-0 flex items-center justify-center">
-                                <div id="activeQrCodeContainer" class="w-36 h-36"></div>
-                            </div>
-
-                            <div class="space-y-3 text-center sm:text-left flex-grow w-full">
-                                <div>
-                                    <span class="text-[10px] uppercase font-bold text-pix tracking-widest">Cobrança Ativa</span>
-                                    <h4 id="displayClientName" class="text-white font-bold text-base">Carlos Daniel Mendes Santos</h4>
-                                    <p class="text-xs text-slate-400 font-mono">Chave: <span id="displayClientKey">70916653170</span></p>
-                                </div>
-
-                                <div class="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono">
-                                    <div class="flex justify-between gap-4 text-slate-400">
-                                        <span>Valor Pix:</span>
-                                        <strong id="displayPayValue" class="text-white">R$ 200,00</strong>
-                                    </div>
-                                    <div class="flex justify-between gap-4 text-emerald-400 font-bold">
-                                        <span>Cashback Garantido:</span>
-                                        <strong id="displayCashbackValue">+ R$ 10,00</strong>
-                                    </div>
-                                </div>
-
-                                <div class="flex gap-2">
-                                    <button onclick="copyPixPayload()" class="w-1/3 py-3 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1">
-                                        <i class="fa-regular fa-copy"></i> Copia e Cola
-                                    </button>
-                                    <button onclick="triggerSimulatedPayment()" id="btnSimulatePay" 
-                                        class="w-2/3 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black rounded-xl shadow-lg glow-cashback transition flex items-center justify-center gap-2">
-                                        <i class="fa-solid fa-money-bill-transfer"></i>
-                                        <span>Simular Pagamento</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    <!-- Server Log Feed -->
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-400">
-                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-terminal text-pix"></i> Log do Servidor em Tempo Real</span>
-                            <button onclick="clearLogs()" class="text-[10px] text-slate-500 hover:text-slate-300">Limpar Console</button>
-                        </div>
-                        <div id="consoleLog" class="h-32 bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-[11px] overflow-y-auto space-y-1 text-slate-300">
-                            <div class="text-slate-500">[SISTEMA] Inicializado em modo Sandbox. Aguardando geração de cobrança...</div>
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
-
-            <!-- History Transactions Table with Search & Filter -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
-                    <div>
-                        <h2 class="font-bold text-lg text-white flex items-center gap-2">
-                            <i class="fa-solid fa-list-check text-pix"></i> Histórico de Transações & Cashback
-                        </h2>
-                        <p class="text-xs text-slate-400">Registros de entradas Pix e saídas de devoluções automáticas</p>
-                    </div>
-
-                    <div class="flex items-center gap-3">
-                        <div class="relative">
-                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-500"></i>
-                            <input type="text" id="searchInput" oninput="filterTransactions()" placeholder="Buscar cliente, CPF..." 
-                                class="pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-pix">
-                        </div>
-                        <button onclick="exportCSV()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition flex items-center gap-1.5">
-                            <i class="fa-solid fa-file-csv"></i> Exportar
-                        </button>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead>
-                            <tr class="text-slate-400 border-b border-slate-800 uppercase font-semibold text-[10px] tracking-wider">
-                                <th class="pb-3 px-2">ID Transação</th>
-                                <th class="pb-3 px-2">Cliente / CPF</th>
-                                <th class="pb-3 px-2">Valor Pago</th>
-                                <th class="pb-3 px-2">Cashback (%)</th>
-                                <th class="pb-3 px-2">Valor Retornado</th>
-                                <th class="pb-3 px-2">Status</th>
-                                <th class="pb-3 px-2 text-right">Data / Hora</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactionTableBody" class="divide-y divide-slate-800/60 font-mono text-slate-300">
-                            <!-- Populated Dynamically -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- TAB 2: LIVE SIMULATOR DETAILED VIEW -->
-        <div id="viewSimulator" class="hidden space-y-6">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl">
-                <div class="border-b border-slate-800 pb-4">
-                    <h2 class="font-bold text-xl text-white flex items-center gap-2">
-                        <i class="fa-solid fa-network-wired text-amber-400"></i> Inspetor de Webhook e Eventos JSON
-                    </h2>
-                    <p class="text-xs text-slate-400">Inspecione o payload JSON recebido e a resposta automatizada do seu servidor Node.js</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
-                            <span class="text-amber-400"><i class="fa-solid fa-arrow-down-left-and-arrow-up-right mr-1"></i> Webhook Recebido (POST /webhook/pix)</span>
-                            <span class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-mono">200 OK</span>
-                        </div>
-                        <pre id="jsonWebhookInput" class="h-80 bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-emerald-400 overflow-y-auto">
-// O payload JSON aparecerá aqui quando o pagamento for simulado...
-                        </pre>
-                    </div>
-
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
-                            <span class="text-pix"><i class="fa-solid fa-paper-plane mr-1"></i> Requisição Pix Out Devolução (POST /v2/gn/pix)</span>
-                            <span class="text-[10px] bg-pix/10 text-pix border border-pix/20 px-2 py-0.5 rounded font-mono">201 CREATED</span>
-                        </div>
-                        <pre id="jsonPixOutOutput" class="h-80 bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-pix overflow-y-auto">
-// A resposta da API de Cashback aparecerá aqui...
-                        </pre>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 3: BACKEND NODE.JS CODE VIEW -->
-        <div id="viewCode" class="hidden space-y-6">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
-                    <div>
-                        <h2 class="font-bold text-xl text-white flex items-center gap-2">
-                            <i class="fa-brands fa-node-js text-emerald-400"></i> Código do Servidor Node.js (Express + Efí)
-                        </h2>
-                        <p class="text-xs text-slate-400">Copie o código completo para rodar a automação no seu servidor backend</p>
-                    </div>
-                    <button onclick="copyCodeSnippet()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl transition flex items-center gap-2">
-                        <i class="fa-regular fa-copy"></i>
-                        <span id="copyCodeText">Copiar Código</span>
-                    </button>
-                </div>
-
-                <div class="relative">
-                    <pre class="bg-slate-950 border border-slate-800 rounded-xl p-5 font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed"><code id="codeSnippetText">const express = require('express');
-const Efipay = require('efipay');
-
-const app = express();
-app.use(express.json());
-
-// 1. Configuração do SDK Oficial com Certificado mTLS
-const options = {
-  sandbox: true, // Mudar para false em produção
-  client_id: process.env.EFI_CLIENT_ID,
-  client_secret: process.env.EFI_CLIENT_SECRET,
-  certificate: './caminho_do_certificado.p12',
-};
-
-const efipay = new Efipay(options);
-
-// 2. Porcentagem de Cashback configurada (ex: 5%)
-const CASHBACK_PERCENTAGE = 0.05;
-
-// 3. Webhook chamado automaticamente pelo banco ao receber o Pix
-app.post('/webhook/pix', async (req, res) => {
-  try {
-    // Confirma imediatamente o recebimento ao Banco Central
-    res.status(200).send({ status: 'recebido' });
-
-    const listaPix = req.body.pix;
-
-    if (listaPix && Array.isArray(listaPix)) {
-      for (const pagamento of listaPix) {
-        const valorPago = parseFloat(pagamento.valor);
-        const chavePixCliente = pagamento.pagador.chavePix || pagamento.pagador.cpf;
-
-        // Calcula o valor exato do cashback
-        const valorCashback = (valorPago * CASHBACK_PERCENTAGE).toFixed(2);
-
-        console.log(`[PIX RECEBIDO] R$ ${valorPago} de ${pagamento.pagador.nome}`);
-        console.log(`[CASHBACK] Enviando R$ ${valorCashback} para chave: ${chavePixCliente}`);
-
-        // Executa a transferência Pix de retorno (Pix Out)
-        await dispararPixOutCashback(chavePixCliente, valorCashback);
-      }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagamento via QR Code</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-  } catch (error) {
-    console.error('Erro no processamento do Webhook:', error);
-  }
-});
 
-// 4. Função auxiliar para envio automático de Pix Out
-async function dispararPixOutCashback(chaveDestino, valor) {
-  const bodyPixOut = {
-    valor: valor.toString(),
-    pagador: {
-      chave: process.env.SUA_CHAVE_PIX_EMPRESA, // Sua chave de origem
-    },
-    favorecido: {
-      chave: chaveDestino, // Chave Pix do cliente beneficiado
-    },
-  };
+    body {
+      background-color: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
 
-  try {
-    const resposta = await efipay.pixSend([], bodyPixOut);
-    console.log('[CASHBACK ENVIADO COM SUCESSO]', resposta);
-    return resposta;
-  } catch (error) {
-    console.error('Erro ao enviar Pix Out:', error);
-    throw error;
-  }
-}
+    .card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      padding: 24px;
+      text-align: center;
+    }
 
-app.listen(443, () => console.log('🚀 Servidor Pix Cashback rodando na porta 443'));
-</code></pre>
-                </div>
-            </div>
-        </div>
+    .header {
+      margin-bottom: 20px;
+    }
 
-    </main>
+    .header h2 {
+      font-size: 1.25rem;
+      color: #1a1a1a;
+      margin-bottom: 8px;
+    }
 
-    <!-- Footer -->
-    <footer class="border-t border-slate-900 bg-slate-950 py-6 px-4 text-center text-xs text-slate-500">
-        <p>Sistema de Demonstração de Cashback via API Pix • Banco Central do Brasil</p>
-    </footer>
+    .balance-box {
+      background-color: #f0f7ff;
+      border: 1px solid #d0e3ff;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 24px;
+    }
 
-    <script>
-        // Application State
-        let currentEnvMode = 'sandbox';
-        let mainBalance = 12450.00;
-        let totalCashbackPaid = 385.50;
-        let cashbackCounter = 48;
-        let activeCharge = null;
-        let currentPayloadMock = '';
+    .balance-label {
+      font-size: 0.85rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-        let mockTransactions = [
-            { id: 'E902831021', nome: 'Carlos Eduardo', cpf: '987.654.321-11', valor: 150.00, rate: 5.0, cashback: 7.50, status: 'CONCLUIDO', data: 'Hoje, 14:22' },
-            { id: 'E902831020', nome: 'Ana Beatriz', cpf: '456.789.123-22', valor: 300.00, rate: 5.0, cashback: 15.00, status: 'CONCLUIDO', data: 'Hoje, 11:05' },
-            { id: 'E902831019', nome: 'Lucas Mendes', cpf: '321.654.987-33', valor: 80.00, rate: 10.0, cashback: 8.00, status: 'CONCLUIDO', data: 'Ontem, 18:40' }
-        ];
+    .balance-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0066cc;
+      margin-top: 4px;
+    }
 
-        // On Page Load
-        window.onload = function() {
-            recalculatePreview();
-            createPixCharge();
-            renderTransactionTable(mockTransactions);
-        };
+    .qr-container {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid #e1e4e8;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
 
-        function switchTab(tab) {
-            document.getElementById('viewDashboard').classList.add('hidden');
-            document.getElementById('viewSimulator').classList.add('hidden');
-            document.getElementById('viewCode').classList.add('hidden');
+    .qr-container img {
+      width: 180px;
+      height: 180px;
+      display: block;
+    }
 
-            document.getElementById('tabBtnDashboard').className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-white";
-            document.getElementById('tabBtnSimulator').className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-white";
-            document.getElementById('tabBtnCode').className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-white";
+    .instructions {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 24px;
+      line-height: 1.4;
+    }
 
-            if (tab === 'dashboard') {
-                document.getElementById('viewDashboard').classList.remove('hidden');
-                document.getElementById('tabBtnDashboard').className = "px-3 py-1.5 rounded-lg bg-slate-800 text-white font-bold";
-            } else if (tab === 'simulator') {
-                document.getElementById('viewSimulator').classList.remove('hidden');
-                document.getElementById('tabBtnSimulator').className = "px-3 py-1.5 rounded-lg bg-slate-800 text-white font-bold";
-            } else if (tab === 'code') {
-                document.getElementById('viewCode').classList.remove('hidden');
-                document.getElementById('tabBtnCode').className = "px-3 py-1.5 rounded-lg bg-slate-800 text-white font-bold";
-            }
-        }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background-color: #0066cc;
+      color: #ffffff;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
 
-        function toggleEnvMode(mode) {
-            currentEnvMode = mode;
-            const sandboxBtn = document.getElementById('modeSandboxBtn');
-            const prodBtn = document.getElementById('modeProdBtn');
+    .btn:hover {
+      background-color: #0052a3;
+    }
+  </style>
+</head>
+<body>
 
-            if (mode === 'sandbox') {
-                sandboxBtn.className = "px-3 py-1.5 font-bold rounded-lg transition-all duration-200 bg-amber-500/20 text-amber-400 border border-amber-500/30";
-                prodBtn.className = "px-3 py-1.5 font-medium text-slate-400 hover:text-white rounded-lg transition-all duration-200";
-                showToast('Ambiente alterado para Sandbox (Simulação)', 'info');
-                logConsole('[SISTEMA] Modo alterado para SANDBOX.');
-            } else {
-                prodBtn.className = "px-3 py-1.5 font-bold rounded-lg transition-all duration-200 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-                sandboxBtn.className = "px-3 py-1.5 font-medium text-slate-400 hover:text-white rounded-lg transition-all duration-200";
-                showToast('Modo de Produção selecionado. Conecte suas chaves no servidor.', 'warning');
-                logConsole('[SISTEMA] Modo PRODUÇÃO selecionado.');
-            }
-        }
+  <div class="card">
+    <div class="header">
+      <h2>Pagar com QR Code</h2>
+    </div>
 
-        function formatCPF(input) {
-            let v = input.value.replace(/\D/g, "");
-            v = v.replace(/(\d{3})(\d)/, "$1.$2");
-            v = v.replace(/(\d{3})(\d)/, "$1.$2");
-            v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-            input.value = v;
-        }
+    <div class="balance-box">
+      <div class="balance-label">Saldo Disponível</div>
+      <div class="balance-value">R$ 10.000.000,00</div>
+    </div>
 
-        function recalculatePreview() {
-            const valor = parseFloat(document.getElementById('inputValor').value) || 0;
-            const rate = parseFloat(document.getElementById('inputRate').value) || 0;
+    <div class="qr-container">
+      <!-- Exemplo de imagem de QR Code simulada -->
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=ExemploPagamento10Milhoes" alt="QR Code de Pagamento">
+    </div>
 
-            const cashback = (valor * (rate / 100));
-            const net = valor - cashback;
+    <p class="instructions">
+      Escaneie o QR Code acima utilizando o aplicativo do seu banco para concluir o pagamento.
+    </p>
 
-            document.getElementById('summaryPayAmount').textContent = `R$ ${valor.toFixed(2)}`;
-            document.getElementById('summaryRatePct').textContent = `${rate.toFixed(1)}%`;
-            document.getElementById('summaryCashbackAmount').textContent = `+ R$ ${cashback.toFixed(2)}`;
-            document.getElementById('summaryNetValue').textContent = `R$ ${net.toFixed(2)}`;
-            document.getElementById('activeRateDisplay').textContent = `${rate.toFixed(1)}%`;
-        }
+    <button class="btn" onclick="alert('Função de confirmação simulada!')">Confirmar Pagamento</button>
+  </div>
 
-        function createPixCharge() {
-            const nome = document.getElementById('inputNome').value;
-            const cpf = document.getElementById('inputCPF').value;
-            const chave = document.getElementById('inputChave').value;
-            const valor = parseFloat(document.getElementById('inputValor').value) || 0;
-            const rate = parseFloat(document.getElementById('inputRate').value) || 0;
-
-            const cashback = (valor * (rate / 100));
-            const randomTxId = 'E32' + Math.floor(Math.random() * 899999999 + 100000000);
-
-            activeCharge = {
-                txid: randomTxId,
-                nome,
-                cpf,
-                chave,
-                valor,
-                rate,
-                cashback,
-                status: 'PENDENTE'
-            };
-
-            document.getElementById('displayClientName').textContent = nome;
-            document.getElementById('displayClientKey').textContent = chave;
-            document.getElementById('displayPayValue').textContent = `R$ ${valor.toFixed(2)}`;
-            document.getElementById('displayCashbackValue').textContent = `+ R$ ${cashback.toFixed(2)}`;
-            
-            document.getElementById('activeStatusBadge').textContent = 'Aguardando Pagamento';
-            document.getElementById('activeStatusBadge').className = 'px-3 py-1 text-xs font-bold rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20';
-
-            resetPipelineUI();
-
-            const qrContainer = document.getElementById('activeQrCodeContainer');
-            qrContainer.innerHTML = '';
-            
-            currentPayloadMock = `00020101021226860014BR.GOV.BCB.PIX2564qrpix.bradesco.com.br/qr/v2/6f7d2fa6-538c-4eb5-85db-a6c71ed2d3c${chave}3520400005303986540810000.00${valor.toFixed(2).length}${valor.toFixed(2)}5802BR5925${nome.length.toString().padStart(2, '0')}${nome}CARLOS DANIEL MENDES SANT6009CAIAPONIA62070503***63043A72`;
-
-            new QRCode(qrContainer, {
-                text: currentPayloadMock,
-                width: 144,
-                height: 144,
-                colorDark: "#020617",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.M
-            });
-
-            logConsole(`[COBRANÇA CRIADA] TxID: ${randomTxId} | Valor: R$ ${valor.toFixed(2)} | Cashback: R$ ${cashback.toFixed(2)} (${rate}%)`);
-            showToast('Cobrança gerada! Clique em "Simular Pagamento" para testar.', 'info');
-        }
-
-        async function triggerSimulatedPayment() {
-            if (!activeCharge || activeCharge.status === 'CONCLUIDO') {
-                showToast('Gere uma nova cobrança antes de simular o pagamento.', 'warning');
-                return;
-            }
-
-            const btn = document.getElementById('btnSimulatePay');
-            btn.disabled = true;
-            btn.classList.add('opacity-50');
-
-            // STEP 1
-            setPipelineStep(1, 'active');
-            logConsole(`[PASSO 1] Cliente ${activeCharge.nome} efetuou o pagamento do Pix de R$ ${activeCharge.valor.toFixed(2)}.`);
-            showToast(`Pagamento de R$ ${activeCharge.valor.toFixed(2)} detectado!`, 'success');
-            await sleep(1000);
-            setPipelineStep(1, 'done');
-
-            // STEP 2
-            setPipelineStep(2, 'active');
-            logConsole(`[PASSO 2] Webhook do Banco enviado para POST /webhook/pix...`);
-            
-            const mockWebhookJson = {
-                evento: "pix.recebido",
-                dataHora: new Date().toISOString(),
-                pix: [{
-                    endToEndId: activeCharge.txid,
-                    txid: activeCharge.txid,
-                    valor: activeCharge.valor.toFixed(2),
-                    horario: new Date().toISOString(),
-                    pagador: {
-                        cpf: activeCharge.cpf,
-                        nome: activeCharge.nome,
-                        chavePix: activeCharge.chave
-                    }
-                }]
-            };
-            document.getElementById('jsonWebhookInput').textContent = JSON.stringify(mockWebhookJson, null, 2);
-            await sleep(1200);
-            setPipelineStep(2, 'done');
-
-            // STEP 3
-            setPipelineStep(3, 'active');
-            logConsole(`[PASSO 3] Servidor calculou ${activeCharge.rate}% de cashback = R$ ${activeCharge.cashback.toFixed(2)}.`);
-            await sleep(1000);
-            setPipelineStep(3, 'done');
-
-            // STEP 4
-            setPipelineStep(4, 'active');
-            logConsole(`[PASSO 4] Executando Pix Out de R$ ${activeCharge.cashback.toFixed(2)} para chave ${activeCharge.chave}...`);
-            
-            const mockPixOutJson = {
-                status: "PAID_AND_SETTLED",
-                idEnvio: "OUT" + Math.floor(Math.random() * 899999 + 100000),
-                valor: activeCharge.cashback.toFixed(2),
-                favorecido: {
-                    chave: activeCharge.chave,
-                    nome: activeCharge.nome
-                },
-                mensagem: "Cashback automático processado com sucesso"
-            };
-            document.getElementById('jsonPixOutOutput').textContent = JSON.stringify(mockPixOutJson, null, 2);
-            await sleep(1200);
-            setPipelineStep(4, 'done');
-
-            // FINISH
-            activeCharge.status = 'CONCLUIDO';
-            document.getElementById('activeStatusBadge').textContent = 'Cashback Concluído!';
-            document.getElementById('activeStatusBadge').className = 'px-3 py-1 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
-
-            mainBalance += (activeCharge.valor - activeCharge.cashback);
-            totalCashbackPaid += activeCharge.cashback;
-            cashbackCounter++;
-
-            document.getElementById('balanceMain').textContent = `R$ ${mainBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('balanceCashback').textContent = `R$ ${totalCashbackPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('cashbackCount').textContent = cashbackCounter;
-
-            mockTransactions.unshift({
-                id: activeCharge.txid,
-                nome: activeCharge.nome,
-                cpf: activeCharge.cpf,
-                valor: activeCharge.valor,
-                rate: activeCharge.rate,
-                cashback: activeCharge.cashback,
-                status: 'CONCLUIDO',
-                data: 'Agora mesmo'
-            });
-
-            renderTransactionTable(mockTransactions);
-            logConsole(`[SUCESSO] R$ ${activeCharge.cashback.toFixed(2)} de cashback foram transferidos para ${activeCharge.nome}!`);
-            showToast(`🚀 Cashback de R$ ${activeCharge.cashback.toFixed(2)} enviado com sucesso!`, 'success');
-
-            btn.disabled = false;
-            btn.classList.remove('opacity-50');
-        }
-
-        function resetPipelineUI() {
-            for (let i = 1; i <= 4; i++) {
-                const stepEl = document.getElementById(`pipeStep${i}`);
-                const dotEl = document.getElementById(`pipeDot${i}`);
-                stepEl.className = "p-3 bg-slate-950 border border-slate-800 rounded-xl text-center transition-all duration-300 opacity-50";
-                dotEl.className = "w-8 h-8 mx-auto mb-2 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-bold text-xs";
-                dotEl.textContent = i;
-            }
-        }
-
-        function setPipelineStep(step, state) {
-            const stepEl = document.getElementById(`pipeStep${step}`);
-            const dotEl = document.getElementById(`pipeDot${step}`);
-
-            if (state === 'active') {
-                stepEl.className = "p-3 bg-slate-900 border border-amber-500/50 rounded-xl text-center transition-all duration-300 shadow-lg glow-pix scale-105";
-                dotEl.className = "w-8 h-8 mx-auto mb-2 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-xs animate-bounce";
-            } else if (state === 'done') {
-                stepEl.className = "p-3 bg-slate-900 border border-emerald-500/50 rounded-xl text-center transition-all duration-300 opacity-100";
-                dotEl.className = "w-8 h-8 mx-auto mb-2 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-bold text-xs";
-                dotEl.innerHTML = '<i class="fa-solid fa-check"></i>';
-            }
-        }
-
-        function renderTransactionTable(data) {
-            const tbody = document.getElementById('transactionTableBody');
-            tbody.innerHTML = '';
-
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-800/40 transition";
-                tr.innerHTML = `
-                    <td class="py-3 px-2 text-slate-400 font-mono">${item.id}</td>
-                    <td class="py-3 px-2 font-sans font-medium text-white">${item.nome}<br><span class="text-[10px] text-slate-500 font-mono">${item.cpf}</span></td>
-                    <td class="py-3 px-2 font-bold text-white">R$ ${item.valor.toFixed(2)}</td>
-                    <td class="py-3 px-2 text-pix font-bold">${item.rate.toFixed(1)}%</td>
-                    <td class="py-3 px-2 font-bold text-emerald-400">+ R$ ${item.cashback.toFixed(2)}</td>
-                    <td class="py-3 px-2">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            ${item.status}
-                        </span>
-                    </td>
-                    <td class="py-3 px-2 text-right text-slate-500 text-[11px]">${item.data}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function filterTransactions() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = mockTransactions.filter(t => 
-                t.nome.toLowerCase().includes(query) || 
-                t.cpf.includes(query) || 
-                t.id.toLowerCase().includes(query)
-            );
-            renderTransactionTable(filtered);
-        }
-
-        function exportCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,ID,Nome,CPF,ValorPago,Taxa,Cashback,Status,Data\n";
-            mockTransactions.forEach(t => {
-                csvContent += `${t.id},${t.nome},${t.cpf},${t.valor},${t.rate},${t.cashback},${t.status},${t.data}\n`;
-            });
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "historico_cashback_pix.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showToast('Relatório CSV baixado com sucesso!', 'success');
-        }
-
-        function copyPixPayload() {
-            navigator.clipboard.writeText(currentPayloadMock).then(() => {
-                showToast('Código Pix Copia e Cola copiado!', 'success');
-            });
-        }
-
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        function logConsole(msg) {
-            const consoleEl = document.getElementById('consoleLog');
-            const time = new Date().toLocaleTimeString('pt-BR');
-            const line = document.createElement('div');
-            line.innerHTML = `<span class="text-slate-500">[${time}]</span> ${msg}`;
-            consoleEl.appendChild(line);
-            consoleEl.scrollTop = consoleEl.scrollHeight;
-        }
-
-        function clearLogs() {
-            document.getElementById('consoleLog').innerHTML = '<div class="text-slate-500">[SISTEMA] Console limpo.</div>';
-        }
-
-        function copyCodeSnippet() {
-            const codeText = document.getElementById('codeSnippetText').innerText;
-            navigator.clipboard.writeText(codeText).then(() => {
-                const copyBtnText = document.getElementById('copyCodeText');
-                copyBtnText.textContent = "Copiado!";
-                showToast('Código Node.js copiado para a área de transferência!', 'success');
-                setTimeout(() => {
-                    copyBtnText.textContent = "Copiar Código";
-                }, 2000);
-            });
-        }
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-
-            const bgColors = {
-                success: 'bg-slate-900 border-emerald-500/50 text-emerald-400',
-                error: 'bg-slate-900 border-rose-500/50 text-rose-400',
-                warning: 'bg-slate-900 border-amber-500/50 text-amber-400',
-                info: 'bg-slate-900 border-pix/50 text-pix'
-            };
-
-            const icons = {
-                success: 'fa-circle-check',
-                error: 'fa-circle-exclamation',
-                warning: 'fa-triangle-exclamation',
-                info: 'fa-circle-info'
-            };
-
-            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 border rounded-xl shadow-xl text-xs font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${bgColors[type] || bgColors.info}`;
-            toast.innerHTML = `<i class="fa-solid ${icons[type]} text-base"></i><span>${message}</span>`;
-
-            container.appendChild(toast);
-
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
-            });
-
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
-        }
-    </script>
 </body>
 </html>
